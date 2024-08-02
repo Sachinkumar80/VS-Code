@@ -1,0 +1,28 @@
+pipeline
+agent any {
+    tools{
+        maven = 3.7
+        java = /jvm/lib/opt/openjdk-11
+    }
+
+// Enviroment variables set 
+ec2instanceid = 'idjf34jsjscw'
+region = 'ap-south-1'
+key = '/tmp/dcr.ppk'
+APP_DIR = '/var/www/html' // Example application directory on EC2
+
+
+    stages("Fetch code"){
+        stage{
+            sh ("git clone https://sachinkumar80/code.git")
+        }        
+    }
+        stage("Build Code"){
+            sh "Maven clean install"
+        }
+
+        stage("Deploy artifacts to the ec2 instance"){
+            sh "mv ROOT.war $APP_DIR"
+            sh "./sh startup.sh" // start tomcat service.
+        }
+}
