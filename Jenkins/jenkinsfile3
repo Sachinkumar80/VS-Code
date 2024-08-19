@@ -1,0 +1,20 @@
+pipeline {
+    agent any {
+        label: Production-server
+    }
+
+
+    stages{
+        steps ('Fetch code'){
+            sh ("git clone https://github.com/sachinkumar08/")
+        }
+
+        steps ('Build code on Docker'){
+            sh ('Docker build -t myapp .')
+        }
+        steps ('Trivy Vulnerabilities check'){
+            // install trivy using some commands
+        }
+        steps ('Publish image to dockerhub')
+    }
+}

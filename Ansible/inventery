@@ -22,3 +22,27 @@ all:
 
 
 
+all:
+  hosts:
+    webserver:
+    dbservers:
+  children:
+    webserver:
+      hosts:
+        172.168.5.87
+        172.168.5.87
+    dbservers:
+      hosts:
+        172.168.5.82
+        172.168.5.84
+
+
+all:
+  children:
+    webserver:
+      hosts:
+        172.168.5.87:
+    dbservers:
+      hosts:
+        172.168.5.82:
+        172.168.5.84:

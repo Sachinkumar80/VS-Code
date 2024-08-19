@@ -1,0 +1,83 @@
+pipeline {
+    agent any
+
+    environment {
+        GIT_REPO = 'https://github.com/yourusername/your-repo.git'
+        BRANCH = 'main' // Branch to build
+        SONARQUBE_SERVER = 'SonarQubeServer' // SonarQube server name as configured in Jenkins
+        SONARQUBE_PROJECT_KEY = 'your-project-key' // SonarQube project key
+        SONARQUBE_TOKEN = credentials('sonarqube-token') // SonarQube token stored in Jenkins
+        AWS_CREDENTIALS = 'aws-credentials-id' // AWS credentials ID stored in Jenkins
+        EC2_HOST = 'ec2-user@your-ec2-ip-address' // EC2 instance details
+        ARTIFACT_NAME = 'your-artifact-name.war' // Artifact name
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: "${BRANCH}", url: "${GIT_REPO}"
+            }
+        }
+
+        stage('Build and Test') {
+            steps {
+                script {
+                    // Run your build and test commands here
+                    // For example, if it's a Maven project:
+                    sh 'mvn clean package'
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                script {
+                    withSonarQubeEnv("${SONARQUBE_SERVER}") {
+                        sh 'mvn sonar:sonar -Dsonar.projectKey=${SONARQUBE_PROJECT_KEY} -Dsonar.login=${SONARQUBE_TOKEN}'
+                    }
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                script {
+                    timeout(time: 1, unit: 'MINUTES') {
+                        waitForQualityGate abortPipeline: true
+                    }
+                }
+            }
+        }
+
+        stage('Publish Artifacts') {
+            steps {
+                script {
+                    // Assuming the artifact is in the target directory
+                    archiveArtifacts artifacts: 'target/*.jar', allowEmptyArchive: true
+                }
+            }
+        }
+
+        stage('Deploy to EC2') {
+            steps {
+                script {
+                    sshagent(['ec2-ssh-credentials-id']) {
+                        sh """
+                            scp -o StrictHostKeyChecking=no target/${ARTIFACT_NAME} ${EC2_HOST}:/home/ec2-user/
+                            ssh -o StrictHostKeyChecking=no ${EC2_HOST} 'sudo systemctl restart your-service'
+                        """
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline executed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed. Check logs for details.'
+        }
+    }
+}
